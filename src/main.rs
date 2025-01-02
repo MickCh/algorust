@@ -1,5 +1,7 @@
+mod b_tree;
 mod binary_heap;
 
+use b_tree::BTree;
 use binary_heap::{BinaryHeap, BinaryHeapType};
 
 fn main() {
@@ -24,4 +26,20 @@ fn main() {
         print!("{:?}, ", v);
     }
     println!();
+
+    let mut b_tree: BTree<i32> = BTree::new(4);
+    b_tree.push(20);
+    b_tree.display();
+    b_tree.push(10);
+    b_tree.display();
+    b_tree.push(40);
+    b_tree.display();
+    b_tree.push(30);
+    b_tree.display();
+    b_tree.push(70);
+    b_tree.display();
+    b_tree.push(60);
+    b_tree.display();
+    b_tree.push(50);
+    b_tree.display();
 }
