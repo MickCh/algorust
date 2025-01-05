@@ -30,7 +30,7 @@ where
     T: std::cmp::PartialOrd + std::fmt::Debug,
 {
     root: Option<Node<T>>,
-    max_degree: usize,
+    max_degree: usize, //max number of children (not keys)
 }
 
 impl<T> BTree<T>
@@ -72,9 +72,9 @@ where
         }
         println!("Parent: {:?}", parent);
         println!(
-            "Children number: {}, keys number: {}",
-            node.children.len(),
-            node.keys.len()
+            "Keys number: {}, children number: {}",
+            node.keys.len(),
+            node.children.len()
         );
 
         //split
@@ -83,13 +83,29 @@ where
 
         match parent {
             Some(p) => {
-                println!("Ops, something new - I need to implement it");
+                println!("Rebalance for child node");
                 //middle goes to parent
+
+                let parent_pos = self.find_pos(p, &node.keys[middle_pos]);
+
                 p.keys.extend(node.keys.drain(middle_pos..=middle_pos));
+                let new_length = p.keys.len();
+                p.keys.swap(parent_pos, new_length - 1);
+
                 p.children
                     .extend(node.children.drain(middle_pos..=middle_pos));
+                let new_length = p.children.len();
+                p.children.swap(parent_pos, new_length - 1);
 
-                //etc
+                //move rest of keys
+                let mut new_node = Node::new(None);
+                new_node.keys.extend(node.keys.drain(middle_pos..));
+                new_node
+                    .children
+                    .extend(node.children.drain(middle_pos + 1..));
+                new_node.children.push(None);
+
+                p.children[parent_pos + 1] = Some(new_node);
             }
             None => {
                 println!("Split for the root node");
@@ -123,8 +139,10 @@ where
         } else {
             println!("Adding value {:?}", &value);
             self.add_value(node, pos, value);
-            self.rebalance(parent, node);
         }
+        self.rebalance(parent, node);
+        println!("AFTER REBALANCE");
+        self.display();
     }
 
     pub fn push(&mut self, value: T) {
