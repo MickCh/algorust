@@ -27,31 +27,19 @@ fn main() {
     // }
     // println!();
 
-    //interesting example:
-    // https://stackoverflow.com/questions/69803989/will-a-b-tree-with-preemptive-splitting-always-have-the-same-height-for-any-inpu
-
     let mut b_tree: BTree<i32> = BTree::new(4);
-    for i in (10..=100).step_by(10) {
+    for i in [
+        10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 12, 14, 15, 16, 17, 18, 19,
+    ] {
         b_tree.push(i);
     }
+    println!();
+    println!("RESULT!!!!!");
     b_tree.display();
-    //TODO: for 10.100 - after rebalancing 30 disappeared
 
-    // b_tree.push(20);
-    // b_tree.display();
-    // b_tree.push(10);
-    // b_tree.display();
-    // b_tree.push(40);
-    // b_tree.display();
-    // b_tree.push(30);
-    // b_tree.display();
-    // b_tree.display();
-    // b_tree.push(70);
-    // b_tree.display();
-    // println!("Adding 60...");
-    // //Preemtive Split
-    // b_tree.push(60);
-    // b_tree.display();
-    // b_tree.push(50);
-    // b_tree.display();
+    //TODO: for 10.100 - after rebalancing 30 disappeared in display
+    //TODO: look up information about Preemtive Split
+
+    //interesting example:
+    // https://stackoverflow.com/questions/69803989/will-a-b-tree-with-preemptive-splitting-always-have-the-same-height-for-any-inpu
 }

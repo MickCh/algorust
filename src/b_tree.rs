@@ -1,15 +1,25 @@
-#[derive(Debug)]
+use std::{cmp::PartialOrd, fmt::Debug};
+
 struct Node<T>
 where
-    T: std::fmt::Debug,
+    T: Debug,
 {
     keys: Vec<T>,
     children: Vec<Option<Node<T>>>,
 }
 
+impl<T> Debug for Node<T>
+where
+    T: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}, ch: {:?}", self.keys, self.children)
+    }
+}
+
 impl<T> Node<T>
 where
-    T: std::fmt::Debug,
+    T: Debug,
 {
     fn new(value: Option<T>) -> Self {
         match value {
@@ -27,15 +37,24 @@ where
 
 pub struct BTree<T>
 where
-    T: std::cmp::PartialOrd + std::fmt::Debug,
+    T: PartialOrd + Debug,
 {
     root: Option<Node<T>>,
     max_degree: usize, //max number of children (not keys)
 }
 
+impl<T> Debug for BTree<T>
+where
+    T: PartialOrd + Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "(value b: )")
+    }
+}
+
 impl<T> BTree<T>
 where
-    T: std::cmp::PartialOrd + std::fmt::Debug,
+    T: PartialOrd + Debug,
 {
     pub fn new(max_degree: usize) -> Self {
         BTree::<T> {
@@ -141,8 +160,6 @@ where
             self.add_value(node, pos, value);
         }
         self.rebalance(parent, node);
-        println!("AFTER REBALANCE");
-        self.display();
     }
 
     pub fn push(&mut self, value: T) {
@@ -157,8 +174,6 @@ where
     }
 
     pub fn display(&self) {
-        // println!("---------");
-        // return;
         println!("B-Tree");
         Self::display_child(&self.root, 1);
         println!("---------");
@@ -171,6 +186,266 @@ where
             for i in nn.children.iter() {
                 Self::display_child(i, level + 1);
             }
+        }
+    }
+}
+
+// Preemptive splitting in a B-tree is the process of splitting a full node while traversing the tree to ensure the parent node has space for a new value. This prevents the need to recursively split nodes up to the root.
+// Here are some details about B-trees and preemptive splitting:
+
+//     When a node is full
+//     A node is full when it contains 2*t - 1 entries, where t is the minimum degree.
+
+// How to split a node
+// To split a node, create two nodes from the full node's keys, split around the median key. Move the median node to the parent to identify the dividing point between the two new trees.
+// Benefits of preemptive splitting
+// Preemptive splitting ensures that there is always space in the parent of any potentially split child node. It also avoids traversing a node twice, which can happen if a node is only split when a new key is inserted.
+// Disadvantages of preemptive splitting
+// Preemptive splitting may result in unnecessary splits
+//
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_b_tree_0_elem() {
+        let b_tree: BTree<i32> = BTree::new(4);
+        assert_eq!(b_tree.max_degree, 4);
+        assert!(b_tree.root.is_none());
+    }
+
+    #[test]
+    fn test_b_tree_1_elem() {
+        let mut b_tree: BTree<i32> = BTree::new(4);
+        b_tree.push(10);
+
+        assert_eq!(b_tree.max_degree, 4);
+        assert!(b_tree.root.is_some());
+
+        if let Some(r) = b_tree.root {
+            check_empty_child(&r, &vec![10]);
+        }
+    }
+
+    #[test]
+    fn test_b_tree_2_elem() {
+        let mut b_tree: BTree<i32> = BTree::new(4);
+
+        for i in [10, 20] {
+            b_tree.push(i);
+        }
+
+        assert_eq!(b_tree.max_degree, 4);
+        assert!(b_tree.root.is_some());
+
+        if let Some(r) = b_tree.root {
+            check_empty_child(&r, &vec![10, 20]);
+        }
+    }
+
+    #[test]
+    fn test_b_tree_3_elem() {
+        let mut b_tree: BTree<i32> = BTree::new(4);
+        for i in [10, 20, 30] {
+            b_tree.push(i);
+        }
+
+        assert_eq!(b_tree.max_degree, 4);
+        assert!(b_tree.root.is_some());
+
+        if let Some(r) = b_tree.root {
+            check_empty_child(&r, &vec![10, 20, 30]);
+        }
+    }
+
+    #[test]
+    fn test_b_tree_4_elem() {
+        let mut b_tree: BTree<i32> = BTree::new(4);
+        for i in [10, 20, 30, 40] {
+            b_tree.push(i);
+        }
+
+        assert_eq!(b_tree.max_degree, 4);
+        assert!(b_tree.root.is_some());
+
+        if let Some(r) = b_tree.root {
+            check_keys(&r, vec![20]);
+            check_empty_children(&r, vec![vec![10], vec![30, 40]]);
+        }
+    }
+
+    #[test]
+    fn test_b_tree_5_elem() {
+        let mut b_tree: BTree<i32> = BTree::new(4);
+        for i in [10, 20, 30, 40, 50] {
+            b_tree.push(i);
+        }
+
+        assert_eq!(b_tree.max_degree, 4);
+        assert!(b_tree.root.is_some());
+
+        if let Some(r) = b_tree.root {
+            check_keys(&r, vec![20]);
+            check_empty_children(&r, vec![vec![10], vec![30, 40, 50]]);
+        }
+    }
+
+    #[test]
+    fn test_b_tree_6_elem() {
+        let mut b_tree: BTree<i32> = BTree::new(4);
+        for i in [10, 20, 30, 40, 50, 60] {
+            b_tree.push(i);
+        }
+
+        assert_eq!(b_tree.max_degree, 4);
+        assert!(b_tree.root.is_some());
+
+        if let Some(r) = b_tree.root {
+            check_keys(&r, vec![20, 40]);
+            check_empty_children(&r, vec![vec![10], vec![30], vec![50, 60]]);
+        }
+    }
+
+    #[test]
+    fn test_b_tree_8_elem() {
+        let mut b_tree: BTree<i32> = BTree::new(4);
+        for i in [10, 20, 30, 40, 50, 60, 70, 80] {
+            b_tree.push(i);
+        }
+
+        assert_eq!(b_tree.max_degree, 4);
+        assert!(b_tree.root.is_some());
+
+        if let Some(r) = b_tree.root {
+            check_keys(&r, vec![20, 40, 60]);
+            check_empty_children(&r, vec![vec![10], vec![30], vec![50], vec![70, 80]]);
+        }
+    }
+
+    #[test]
+    fn test_b_tree_10_elem() {
+        let mut b_tree: BTree<i32> = BTree::new(4);
+        for i in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100] {
+            b_tree.push(i);
+        }
+
+        assert_eq!(b_tree.max_degree, 4);
+        assert!(b_tree.root.is_some());
+
+        if let Some(r) = b_tree.root {
+            check_keys(&r, vec![40]);
+
+            assert_eq!(r.children.len(), 2);
+
+            assert!(r.children[0].is_some());
+            if let Some(child) = &r.children[0] {
+                check_keys(child, vec![20]);
+                check_empty_children(child, vec![vec![10], vec![30]]);
+            }
+
+            assert!(r.children[1].is_some());
+            if let Some(child) = &r.children[1] {
+                check_keys(child, vec![60, 80]);
+                check_empty_children(child, vec![vec![50], vec![70], vec![90, 100]]);
+            }
+        }
+    }
+
+    #[test]
+    fn test_b_tree_13_elem() {
+        let mut b_tree: BTree<i32> = BTree::new(4);
+        for i in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 12, 14, 15] {
+            b_tree.push(i);
+        }
+
+        assert_eq!(b_tree.max_degree, 4);
+        assert!(b_tree.root.is_some());
+
+        if let Some(r) = b_tree.root {
+            check_keys(&r, vec![40]);
+
+            assert_eq!(r.children.len(), 2);
+
+            assert!(r.children[0].is_some());
+            if let Some(child) = &r.children[0] {
+                check_keys(child, vec![12, 20]);
+                check_empty_children(child, vec![vec![10], vec![14, 15], vec![30]]);
+            }
+
+            assert!(r.children[1].is_some());
+            if let Some(child) = &r.children[1] {
+                check_keys(child, vec![60, 80]);
+                check_empty_children(child, vec![vec![50], vec![70], vec![90, 100]]);
+            }
+        }
+    }
+
+    #[test]
+    fn test_b_tree_16_elem() {
+        let mut b_tree: BTree<i32> = BTree::new(4);
+        for i in [
+            10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 12, 14, 15, 16, 17, 18, 19,
+        ] {
+            b_tree.push(i);
+        }
+
+        assert_eq!(b_tree.max_degree, 4);
+        assert!(b_tree.root.is_some());
+
+        if let Some(r) = b_tree.root {
+            check_keys(&r, vec![15, 40]);
+
+            assert_eq!(r.children.len(), 3);
+
+            assert!(r.children[0].is_some());
+            if let Some(child) = &r.children[0] {
+                check_keys(child, vec![12]);
+                check_empty_children(child, vec![vec![10], vec![14]]);
+            }
+
+            assert!(r.children[1].is_some());
+            if let Some(child) = &r.children[1] {
+                check_keys(child, vec![17, 20]);
+                check_empty_children(child, vec![vec![16], vec![18, 19], vec![30]]);
+            }
+
+            assert!(r.children[2].is_some());
+            if let Some(child) = &r.children[2] {
+                check_keys(child, vec![60, 80]);
+                check_empty_children(child, vec![vec![50], vec![70], vec![90, 100]]);
+            }
+        }
+    }
+
+    fn check_keys(node: &Node<i32>, vector: Vec<i32>) {
+        assert_eq!(node.keys.len(), vector.len());
+
+        for i in 0..vector.len() {
+            assert_eq!(node.keys[i], vector[i]);
+        }
+    }
+
+    fn check_empty_children(node: &Node<i32>, vector: Vec<Vec<i32>>) {
+        assert_eq!(node.children.len(), vector.len());
+
+        for i in 0..vector.len() {
+            if let Some(node) = &node.children[i] {
+                check_empty_child(node, &vector[i]);
+            }
+        }
+    }
+
+    fn check_empty_child(node: &Node<i32>, vector: &Vec<i32>) {
+        assert_eq!(node.keys.len(), vector.len());
+
+        for i in 0..vector.len() {
+            assert_eq!(node.keys[i], vector[i]);
+        }
+
+        assert_eq!(node.children.len(), vector.len() + 1);
+        for ch in node.children.iter() {
+            assert!(ch.is_none());
         }
     }
 }
