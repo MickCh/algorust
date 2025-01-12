@@ -39,6 +39,7 @@ pub struct BTree<T>
 where
     T: PartialOrd + Debug,
 {
+    enable_debug: bool,
     root: Option<Node<T>>,
     max_degree: usize, //max number of children (not keys)
 }
@@ -48,7 +49,7 @@ where
     T: PartialOrd + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "(value b: )")
+        write!(f, "(B-Tree)")
     }
 }
 
@@ -58,22 +59,15 @@ where
 {
     pub fn new(max_degree: usize) -> Self {
         BTree::<T> {
+            enable_debug: false,
             root: None,
             max_degree,
         }
     }
 
     fn add_value(&self, node: &mut Node<T>, pos: usize, value: T) {
-        match pos == node.keys.len() {
-            false => {
-                node.keys.insert(pos, value);
-                node.children.insert(pos, None)
-            }
-            true => {
-                node.keys.push(value);
-                node.children.push(None)
-            }
-        }
+        node.keys.insert(pos, value);
+        node.children.insert(pos, None)
     }
 
     fn find_pos(&self, node: &Node<T>, value: &T) -> usize {
@@ -87,24 +81,41 @@ where
 
     fn rebalance(&self, parent: Option<&mut Node<T>>, node: &mut Node<T>) {
         if node.keys.len() < self.max_degree {
+            if self.enable_debug {
+                println!("Rebalance started but not needed");
+            }
             return;
         }
-        println!("Parent: {:?}", parent);
-        println!(
-            "Keys number: {}, children number: {}",
-            node.keys.len(),
-            node.children.len()
-        );
+        if self.enable_debug {
+            if parent.is_some() {
+                println!("Rebalance for child node");
+            } else {
+                println!("Split for the root node");
+            }
+            println!("Parent: {:?}", parent);
+            println!("Node: {:?}", node);
+        }
 
         //split
         let middle_pos = (node.keys.len() - 1) / 2; //keeps less keys on the left if length is even
-        println!("Split {:?} with middle_pos: {middle_pos}", node.keys);
+                                                    // println!("Split {:?} with middle_pos: {middle_pos}", node.keys);
 
         match parent {
-            Some(p) => {
-                println!("Rebalance for child node");
-                //middle goes to parent
+            None => {
+                //this is implementation for root - current node as new root and split to left & right child
+                let mut right: Node<T> = Node::new(None);
+                right.keys.extend(node.keys.drain(middle_pos + 1..));
+                right.children.extend(node.children.drain(middle_pos + 1..));
 
+                let mut left: Node<T> = Node::new(None);
+                left.keys.extend(node.keys.drain(..middle_pos));
+                left.children.extend(node.children.drain(..=middle_pos));
+
+                node.children.push(Some(left));
+                node.children.push(Some(right));
+            }
+            Some(p) => {
+                //rebalance one of the children
                 let parent_pos = self.find_pos(p, &node.keys[middle_pos]);
 
                 p.keys.extend(node.keys.drain(middle_pos..=middle_pos));
@@ -126,37 +137,22 @@ where
 
                 p.children[parent_pos + 1] = Some(new_node);
             }
-            None => {
-                println!("Split for the root node");
-
-                //this is implementation for root (parent is None)
-                let mut left: Node<T> = Node::new(None);
-                let mut right: Node<T> = Node::new(None);
-
-                right.keys.extend(node.keys.drain((middle_pos + 1)..));
-                right
-                    .children
-                    .extend(node.children.drain((middle_pos + 1)..));
-
-                left.keys.extend(node.keys.drain(..middle_pos));
-                left.children.extend(node.children.drain(..middle_pos));
-                left.children.push(None);
-
-                node.children[0] = Some(left);
-                node.children.push(Some(right));
-            }
         }
     }
 
     fn push_int(&self, parent: Option<&mut Node<T>>, node: &mut Node<T>, value: T) {
-        println!("P: {:?}", parent);
+        // if self.enable_debug {
+        //     println!("P: {:?}", parent);
+        // }
         let pos = self.find_pos(node, &value);
 
         if let Some(mut child) = node.children[pos].take() {
             self.push_int(Some(node), &mut child, value); //TODO: parent should be node, not parent, how can I use it?
             node.children[pos] = Some(child);
         } else {
-            println!("Adding value {:?}", &value);
+            if self.enable_debug {
+                println!("Adding value {:?}", &value);
+            }
             self.add_value(node, pos, value);
         }
         self.rebalance(parent, node);
@@ -175,18 +171,37 @@ where
 
     pub fn display(&self) {
         println!("B-Tree");
-        Self::display_child(&self.root, 1);
+        for i in 1.. {
+            let result = Self::display_child(&self.root, 1, i);
+            if !result {
+                break;
+            }
+        }
+
         println!("---------");
     }
 
-    fn display_child(node: &Option<Node<T>>, level: usize) {
-        println!("L{}: {:?}", level, node);
+    fn display_child(node: &Option<Node<T>>, level: usize, expected_level: usize) -> bool {
+        if level == expected_level {
+            println!("L{}: {:?}", level, node);
+        }
+
+        let mut result = false;
 
         if let Some(nn) = node {
             for i in nn.children.iter() {
-                Self::display_child(i, level + 1);
+                result = Self::display_child(i, level + 1, expected_level);
+
+                if i.is_some() && level == expected_level {
+                    result = true;
+                }
             }
         }
+        result
+    }
+
+    pub fn enable_debug(&mut self) {
+        self.enable_debug = true;
     }
 }
 
@@ -385,6 +400,38 @@ mod tests {
     fn test_b_tree_16_elem() {
         let mut b_tree: BTree<i32> = BTree::new(4);
         for i in [
+            10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 12, 14, 15, 16, 17, 18,
+        ] {
+            b_tree.push(i);
+        }
+
+        assert_eq!(b_tree.max_degree, 4);
+        assert!(b_tree.root.is_some());
+
+        if let Some(r) = b_tree.root {
+            check_keys(&r, vec![40]);
+
+            assert_eq!(r.children.len(), 2);
+
+            assert!(r.children[0].is_some());
+            if let Some(child) = &r.children[0] {
+                check_keys(child, vec![12, 15, 20]);
+                check_empty_children(child, vec![vec![10], vec![14], vec![16, 17, 18], vec![31]]);
+                //TODO - BAD 31, should be 30 but it isn't check
+            }
+
+            assert!(r.children[1].is_some());
+            if let Some(child) = &r.children[1] {
+                check_keys(child, vec![60, 80]);
+                check_empty_children(child, vec![vec![50], vec![70], vec![90, 100]]);
+            }
+        }
+    }
+
+    #[test]
+    fn test_b_tree_17_elem() {
+        let mut b_tree: BTree<i32> = BTree::new(4);
+        for i in [
             10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 12, 14, 15, 16, 17, 18, 19,
         ] {
             b_tree.push(i);
@@ -430,6 +477,8 @@ mod tests {
         assert_eq!(node.children.len(), vector.len());
 
         for i in 0..vector.len() {
+            assert!(&node.children[i].is_some());
+
             if let Some(node) = &node.children[i] {
                 check_empty_child(node, &vector[i]);
             }

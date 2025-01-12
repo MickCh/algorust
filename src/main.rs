@@ -29,15 +29,17 @@ fn main() {
 
     let mut b_tree: BTree<i32> = BTree::new(4);
     for i in [
-        10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 12, 14, 15, 16, 17, 18, 19,
+        10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 12, 14, //15, 16, 17, //18,
     ] {
         b_tree.push(i);
     }
+    b_tree.display();
+    b_tree.enable_debug();
+    b_tree.push(15);
     println!();
-    println!("RESULT!!!!!");
     b_tree.display();
 
-    //TODO: for 10.100 - after rebalancing 30 disappeared in display
+    //TODO: for when added 15, node with value 30 disappears
     //TODO: look up information about Preemtive Split
 
     //interesting example:
