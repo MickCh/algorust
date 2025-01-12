@@ -135,6 +135,14 @@ where
                     .extend(node.children.drain(middle_pos + 1..));
                 new_node.children.push(None);
 
+                if self.enable_debug {
+                    println!("Children length {}", p.children.len());
+                    println!("PARENT_POS {}", parent_pos);
+                    for i in p.children.iter() {
+                        println!("PPP: {:?}", i);
+                    }
+                }
+                //TODO: move all children > parent_pos + 1 to the right
                 p.children[parent_pos + 1] = Some(new_node);
             }
         }
