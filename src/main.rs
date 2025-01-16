@@ -38,8 +38,9 @@ fn main() {
     b_tree.push(18);
     println!();
     b_tree.display();
+    b_tree.pop(10);
+    b_tree.display();
 
-    //TODO: for when added 15, node with value 30 disappears
     //TODO: look up information about Preemtive Split
 
     //interesting example:

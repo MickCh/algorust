@@ -1,6 +1,5 @@
 use std::{cmp::PartialOrd, fmt::Debug};
 
-#[derive(Debug)]
 struct Node<T>
 where
     T: Debug,
@@ -9,14 +8,14 @@ where
     children: Vec<Option<Node<T>>>,
 }
 
-// impl<T> Debug for Node<T>
-// where
-//     T: Debug,
-// {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         write!(f, "{:?}, ch: {:?}", self.keys, self.children)
-//     }
-// }
+impl<T> Debug for Node<T>
+where
+    T: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}, ch: {:?}", self.keys, self.children)
+    }
+}
 
 impl<T> Node<T>
 where
@@ -45,15 +44,6 @@ where
     max_degree: usize, //max number of children (not keys)
 }
 
-// impl<T> Debug for BTree<T>
-// where
-//     T: PartialOrd + Debug,
-// {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         write!(f, "(B-Tree)")
-//     }
-// }
-
 impl<T> BTree<T>
 where
     T: PartialOrd + Debug,
@@ -66,18 +56,47 @@ where
         }
     }
 
-    fn add_value(&self, node: &mut Node<T>, pos: usize, value: T) {
-        node.keys.insert(pos, value);
-        node.children.insert(pos, None)
+    pub fn push(&mut self, value: T) {
+        let root = match self.root.take() {
+            Some(mut rt) => {
+                self.push_int(None, &mut rt, value);
+                rt
+            }
+            None => Node::new(Some(value)),
+        };
+        self.root = Some(root);
     }
 
-    fn find_pos(&self, node: &Node<T>, value: &T) -> usize {
-        for i in 0..node.keys.len() {
-            if *value < node.keys[i] {
-                return i;
+    pub fn pop(&mut self, _: T) {
+        panic!("Not implemented yet")
+    }
+
+    pub fn display(&self) {
+        println!("B-Tree");
+        for i in 1.. {
+            let result = Self::display_child(&self.root, 1, i);
+            if !result {
+                break;
             }
         }
-        node.keys.len()
+        println!("---------");
+    }
+
+    pub fn enable_debug(&mut self) {
+        self.enable_debug = true;
+    }
+
+    fn push_int(&self, parent: Option<&mut Node<T>>, node: &mut Node<T>, value: T) {
+        let pos = self.find_pos(node, &value);
+
+        if let Some(mut child) = node.children[pos].take() {
+            self.push_int(Some(node), &mut child, value);
+            node.children[pos] = Some(child);
+        } else {
+            self.add_value(node, pos, value);
+        }
+
+        self.rebalance(parent, node);
     }
 
     fn rebalance(&self, parent: Option<&mut Node<T>>, node: &mut Node<T>) {
@@ -122,40 +141,18 @@ where
         }
     }
 
-    fn push_int(&self, parent: Option<&mut Node<T>>, node: &mut Node<T>, value: T) {
-        let pos = self.find_pos(node, &value);
-
-        if let Some(mut child) = node.children[pos].take() {
-            self.push_int(Some(node), &mut child, value);
-            node.children[pos] = Some(child);
-        } else {
-            self.add_value(node, pos, value);
-        }
-
-        self.rebalance(parent, node);
+    fn add_value(&self, node: &mut Node<T>, pos: usize, value: T) {
+        node.keys.insert(pos, value);
+        node.children.insert(pos, None)
     }
 
-    pub fn push(&mut self, value: T) {
-        let root = match self.root.take() {
-            Some(mut rt) => {
-                self.push_int(None, &mut rt, value);
-                rt
-            }
-            None => Node::new(Some(value)),
-        };
-        self.root = Some(root);
-    }
-
-    pub fn display(&self) {
-        println!("B-Tree");
-        for i in 1.. {
-            let result = Self::display_child(&self.root, 1, i);
-            if !result {
-                break;
+    fn find_pos(&self, node: &Node<T>, value: &T) -> usize {
+        for i in 0..node.keys.len() {
+            if *value < node.keys[i] {
+                return i;
             }
         }
-
-        println!("---------");
+        node.keys.len()
     }
 
     fn display_child(node: &Option<Node<T>>, level: usize, expected_level: usize) -> bool {
@@ -175,10 +172,6 @@ where
             }
         }
         result
-    }
-
-    pub fn enable_debug(&mut self) {
-        self.enable_debug = true;
     }
 }
 
