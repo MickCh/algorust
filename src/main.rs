@@ -29,13 +29,13 @@ fn main() {
 
     let mut b_tree: BTree<i32> = BTree::new(4);
     for i in [
-        10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 12, 14, //15, 16, 17, //18,
+        10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 12, 14, 15, 16, 17, //18,
     ] {
         b_tree.push(i);
     }
     b_tree.display();
     b_tree.enable_debug();
-    b_tree.push(15);
+    b_tree.push(18);
     println!();
     b_tree.display();
 

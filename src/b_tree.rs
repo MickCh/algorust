@@ -1,5 +1,6 @@
 use std::{cmp::PartialOrd, fmt::Debug};
 
+#[derive(Debug)]
 struct Node<T>
 where
     T: Debug,
@@ -8,14 +9,14 @@ where
     children: Vec<Option<Node<T>>>,
 }
 
-impl<T> Debug for Node<T>
-where
-    T: Debug,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}, ch: {:?}", self.keys, self.children)
-    }
-}
+// impl<T> Debug for Node<T>
+// where
+//     T: Debug,
+// {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         write!(f, "{:?}, ch: {:?}", self.keys, self.children)
+//     }
+// }
 
 impl<T> Node<T>
 where
@@ -44,14 +45,14 @@ where
     max_degree: usize, //max number of children (not keys)
 }
 
-impl<T> Debug for BTree<T>
-where
-    T: PartialOrd + Debug,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "(B-Tree)")
-    }
-}
+// impl<T> Debug for BTree<T>
+// where
+//     T: PartialOrd + Debug,
+// {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         write!(f, "(B-Tree)")
+//     }
+// }
 
 impl<T> BTree<T>
 where
@@ -81,28 +82,15 @@ where
 
     fn rebalance(&self, parent: Option<&mut Node<T>>, node: &mut Node<T>) {
         if node.keys.len() < self.max_degree {
-            if self.enable_debug {
-                println!("Rebalance started but not needed");
-            }
             return;
-        }
-        if self.enable_debug {
-            if parent.is_some() {
-                println!("Rebalance for child node");
-            } else {
-                println!("Split for the root node");
-            }
-            println!("Parent: {:?}", parent);
-            println!("Node: {:?}", node);
         }
 
         //split
         let middle_pos = (node.keys.len() - 1) / 2; //keeps less keys on the left if length is even
-                                                    // println!("Split {:?} with middle_pos: {middle_pos}", node.keys);
 
         match parent {
             None => {
-                //this is implementation for root - current node as new root and split to left & right child
+                //root - current node as new root and split to left & right child
                 let mut right: Node<T> = Node::new(None);
                 right.keys.extend(node.keys.drain(middle_pos + 1..));
                 right.children.extend(node.children.drain(middle_pos + 1..));
@@ -122,47 +110,28 @@ where
                 let new_length = p.keys.len();
                 p.keys.swap(parent_pos, new_length - 1);
 
-                p.children
-                    .extend(node.children.drain(middle_pos..=middle_pos));
-                let new_length = p.children.len();
-                p.children.swap(parent_pos, new_length - 1);
-
-                //move rest of keys
-                let mut new_node = Node::new(None);
-                new_node.keys.extend(node.keys.drain(middle_pos..));
-                new_node
+                //add new child
+                let mut new_child = Node::new(None);
+                new_child.keys.extend(node.keys.drain(middle_pos..));
+                new_child
                     .children
                     .extend(node.children.drain(middle_pos + 1..));
-                new_node.children.push(None);
 
-                if self.enable_debug {
-                    println!("Children length {}", p.children.len());
-                    println!("PARENT_POS {}", parent_pos);
-                    for i in p.children.iter() {
-                        println!("PPP: {:?}", i);
-                    }
-                }
-                //TODO: move all children > parent_pos + 1 to the right
-                p.children[parent_pos + 1] = Some(new_node);
+                p.children.insert(parent_pos + 1, Some(new_child));
             }
         }
     }
 
     fn push_int(&self, parent: Option<&mut Node<T>>, node: &mut Node<T>, value: T) {
-        // if self.enable_debug {
-        //     println!("P: {:?}", parent);
-        // }
         let pos = self.find_pos(node, &value);
 
         if let Some(mut child) = node.children[pos].take() {
-            self.push_int(Some(node), &mut child, value); //TODO: parent should be node, not parent, how can I use it?
+            self.push_int(Some(node), &mut child, value);
             node.children[pos] = Some(child);
         } else {
-            if self.enable_debug {
-                println!("Adding value {:?}", &value);
-            }
             self.add_value(node, pos, value);
         }
+
         self.rebalance(parent, node);
     }
 
@@ -424,8 +393,7 @@ mod tests {
             assert!(r.children[0].is_some());
             if let Some(child) = &r.children[0] {
                 check_keys(child, vec![12, 15, 20]);
-                check_empty_children(child, vec![vec![10], vec![14], vec![16, 17, 18], vec![31]]);
-                //TODO - BAD 31, should be 30 but it isn't check
+                check_empty_children(child, vec![vec![10], vec![14], vec![16, 17, 18], vec![30]]);
             }
 
             assert!(r.children[1].is_some());
