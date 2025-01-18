@@ -67,8 +67,16 @@ where
         self.root = Some(root);
     }
 
-    pub fn pop(&mut self, _: T) {
-        panic!("Not implemented yet")
+    pub fn pop(&mut self, value: T) {
+        if let Some(mut rt) = self.root.take() {
+            self.pop_in(None, &mut rt, value);
+
+            if rt.keys.is_empty() {
+                self.root = None;
+            } else {
+                self.root = Some(rt);
+            }
+        };
     }
 
     pub fn display(&self) {
@@ -141,6 +149,37 @@ where
         }
     }
 
+    fn pop_in(&self, parent: Option<&mut Node<T>>, node: &mut Node<T>, value: T) {
+        let pos_eq = (0..node.keys.len()).find(|&i| value == node.keys[i]);
+
+        if let Some(pos) = pos_eq {
+            self.pop_value(parent, node, pos);
+        } else {
+            let pos = self.find_pos(node, &value);
+
+            if let Some(mut child) = node.children[pos].take() {
+                self.pop_in(Some(node), &mut child, value);
+                node.children[pos] = Some(child);
+            }
+        }
+
+        //self.rebalance(parent, node);
+    }
+
+    fn pop_value(&self, _parent: Option<&mut Node<T>>, node: &mut Node<T>, pos: usize) {
+        node.keys.remove(pos);
+        node.children.remove(pos + 1);
+        if node.keys.is_empty() {
+            node.children.remove(pos);
+        }
+        //TODO: what's about children?
+
+        // node.children.drain(pos + 1..=pos + 1);
+        // let drain = node.keys.drain(pos..=pos);
+        // let length = drain.as_slice();
+        // &drain.as_slice()[0]
+    }
+
     fn add_value(&self, node: &mut Node<T>, pos: usize, value: T) {
         node.keys.insert(pos, value);
         node.children.insert(pos, None)
@@ -194,14 +233,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_b_tree_0_elem() {
+    fn test_b_tree_0() {
         let b_tree: BTree<i32> = BTree::new(4);
         assert_eq!(b_tree.max_degree, 4);
         assert!(b_tree.root.is_none());
     }
 
     #[test]
-    fn test_b_tree_1_elem() {
+    fn test_b_tree_push_1() {
         let mut b_tree: BTree<i32> = BTree::new(4);
         b_tree.push(10);
 
@@ -214,7 +253,7 @@ mod tests {
     }
 
     #[test]
-    fn test_b_tree_2_elem() {
+    fn test_b_tree_push_2() {
         let mut b_tree: BTree<i32> = BTree::new(4);
 
         for i in [10, 20] {
@@ -230,7 +269,7 @@ mod tests {
     }
 
     #[test]
-    fn test_b_tree_3_elem() {
+    fn test_b_tree_push_3() {
         let mut b_tree: BTree<i32> = BTree::new(4);
         for i in [10, 20, 30] {
             b_tree.push(i);
@@ -245,7 +284,7 @@ mod tests {
     }
 
     #[test]
-    fn test_b_tree_4_elem() {
+    fn test_b_tree_push_4() {
         let mut b_tree: BTree<i32> = BTree::new(4);
         for i in [10, 20, 30, 40] {
             b_tree.push(i);
@@ -261,7 +300,7 @@ mod tests {
     }
 
     #[test]
-    fn test_b_tree_5_elem() {
+    fn test_b_tree_push_5() {
         let mut b_tree: BTree<i32> = BTree::new(4);
         for i in [10, 20, 30, 40, 50] {
             b_tree.push(i);
@@ -277,7 +316,7 @@ mod tests {
     }
 
     #[test]
-    fn test_b_tree_6_elem() {
+    fn test_b_tree_push_6() {
         let mut b_tree: BTree<i32> = BTree::new(4);
         for i in [10, 20, 30, 40, 50, 60] {
             b_tree.push(i);
@@ -293,7 +332,7 @@ mod tests {
     }
 
     #[test]
-    fn test_b_tree_8_elem() {
+    fn test_b_tree_push_8() {
         let mut b_tree: BTree<i32> = BTree::new(4);
         for i in [10, 20, 30, 40, 50, 60, 70, 80] {
             b_tree.push(i);
@@ -309,7 +348,7 @@ mod tests {
     }
 
     #[test]
-    fn test_b_tree_10_elem() {
+    fn test_b_tree_push_10() {
         let mut b_tree: BTree<i32> = BTree::new(4);
         for i in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100] {
             b_tree.push(i);
@@ -338,7 +377,7 @@ mod tests {
     }
 
     #[test]
-    fn test_b_tree_13_elem() {
+    fn test_b_tree_push_13() {
         let mut b_tree: BTree<i32> = BTree::new(4);
         for i in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 12, 14, 15] {
             b_tree.push(i);
@@ -367,7 +406,7 @@ mod tests {
     }
 
     #[test]
-    fn test_b_tree_16_elem() {
+    fn test_b_tree_push_16() {
         let mut b_tree: BTree<i32> = BTree::new(4);
         for i in [
             10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 12, 14, 15, 16, 17, 18,
@@ -398,13 +437,13 @@ mod tests {
     }
 
     #[test]
-    fn test_b_tree_17_elem() {
+    fn test_b_tree_push_17() {
         let mut b_tree: BTree<i32> = BTree::new(4);
-        for i in [
+        [
             10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 12, 14, 15, 16, 17, 18, 19,
-        ] {
-            b_tree.push(i);
-        }
+        ]
+        .iter()
+        .for_each(|&i| b_tree.push(i));
 
         assert_eq!(b_tree.max_degree, 4);
         assert!(b_tree.root.is_some());
@@ -431,6 +470,58 @@ mod tests {
                 check_keys(child, vec![60, 80]);
                 check_empty_children(child, vec![vec![50], vec![70], vec![90, 100]]);
             }
+        }
+    }
+
+    #[test]
+    fn test_b_tree_push_1_pop_1() {
+        let mut b_tree: BTree<i32> = BTree::new(4);
+        b_tree.push(10);
+        b_tree.pop(10);
+
+        assert_eq!(b_tree.max_degree, 4);
+        assert!(b_tree.root.is_none());
+    }
+
+    #[test]
+    fn test_b_tree_push_3_pop_1a() {
+        let mut b_tree: BTree<i32> = BTree::new(4);
+        [10, 20, 30].iter().for_each(|&i| b_tree.push(i));
+        b_tree.pop(10);
+
+        assert_eq!(b_tree.max_degree, 4);
+        assert!(b_tree.root.is_some());
+
+        if let Some(r) = b_tree.root {
+            check_empty_child(&r, &vec![20, 30]);
+        }
+    }
+
+    #[test]
+    fn test_b_tree_push_3_pop_1b() {
+        let mut b_tree: BTree<i32> = BTree::new(4);
+        [10, 20, 30].iter().for_each(|&i| b_tree.push(i));
+        b_tree.pop(20);
+
+        assert_eq!(b_tree.max_degree, 4);
+        assert!(b_tree.root.is_some());
+
+        if let Some(r) = b_tree.root {
+            check_empty_child(&r, &vec![10, 30]);
+        }
+    }
+
+    #[test]
+    fn test_b_tree_push_3_pop_1c() {
+        let mut b_tree: BTree<i32> = BTree::new(4);
+        [10, 20, 30].iter().for_each(|&i| b_tree.push(i));
+        b_tree.pop(30);
+
+        assert_eq!(b_tree.max_degree, 4);
+        assert!(b_tree.root.is_some());
+
+        if let Some(r) = b_tree.root {
+            check_empty_child(&r, &vec![10, 20]);
         }
     }
 
