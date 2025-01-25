@@ -67,16 +67,19 @@ where
         self.root = Some(root);
     }
 
-    pub fn pop(&mut self, value: T) {
+    pub fn pop(&mut self, value: T) -> Option<T> {
         if let Some(mut rt) = self.root.take() {
-            self.pop_in(None, &mut rt, value);
+            let result = self.pop_in(None, &mut rt, value);
 
             if rt.keys.is_empty() {
                 self.root = None;
             } else {
                 self.root = Some(rt);
             }
+
+            return result;
         };
+        None
     }
 
     pub fn display(&self) {
@@ -149,40 +152,49 @@ where
         }
     }
 
-    fn pop_in(&self, parent: Option<&mut Node<T>>, node: &mut Node<T>, value: T) {
+    fn pop_in(&self, parent: Option<&mut Node<T>>, node: &mut Node<T>, value: T) -> Option<T> {
         let pos_eq = (0..node.keys.len()).find(|&i| value == node.keys[i]);
 
+        let result: Option<T>;
+
         if let Some(pos) = pos_eq {
-            self.pop_value(parent, node, pos);
+            result = Some(self.pop_value(parent, node, pos));
         } else {
             let pos = self.find_pos(node, &value);
 
             if let Some(mut child) = node.children[pos].take() {
                 self.pop_in(Some(node), &mut child, value);
-                node.children[pos] = Some(child);
+                if !child.keys.is_empty() {
+                    //TODO: what's happened with children?
+                    node.children[pos] = Some(child);
+                } else {
+                    node.children[pos] = None;
+                }
             }
+            result = None;
         }
 
         //self.rebalance(parent, node);
+        result
     }
 
-    fn pop_value(&self, _parent: Option<&mut Node<T>>, node: &mut Node<T>, pos: usize) {
-        node.keys.remove(pos);
+    fn add_value(&self, node: &mut Node<T>, pos: usize, value: T) {
+        node.keys.insert(pos, value);
+        node.children.insert(pos, None)
+    }
+
+    fn pop_value(&self, _parent: Option<&mut Node<T>>, node: &mut Node<T>, pos: usize) -> T {
         node.children.remove(pos + 1);
         if node.keys.is_empty() {
             node.children.remove(pos);
         }
+        node.keys.remove(pos)
         //TODO: what's about children?
 
         // node.children.drain(pos + 1..=pos + 1);
         // let drain = node.keys.drain(pos..=pos);
         // let length = drain.as_slice();
         // &drain.as_slice()[0]
-    }
-
-    fn add_value(&self, node: &mut Node<T>, pos: usize, value: T) {
-        node.keys.insert(pos, value);
-        node.children.insert(pos, None)
     }
 
     fn find_pos(&self, node: &Node<T>, value: &T) -> usize {

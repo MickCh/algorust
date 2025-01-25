@@ -45,7 +45,12 @@ fn main() {
 
     b_tree.display();
     b_tree.enable_debug();
+
     b_tree.pop(40);
+    println!();
+    b_tree.display();
+
+    b_tree.pop(30);
     println!();
     b_tree.display();
 
